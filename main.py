@@ -16,11 +16,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         'http://localhost:8000', 'http://127.0.0.1:8000',
-        'https://the-game-persronal-production.up.railway.app'
+        'https://the-game-persronal-production.up.railway.app',
+        'https://frontend-production.up.railway.app'
     ],
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
+
 )
 
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
