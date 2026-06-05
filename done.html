@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>A.I.L.L — Loop Layer</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--g:#20c97a;--gs:rgba(32,201,122,0.09);--border:rgba(32,201,122,0.16);--bg:#030a0f;--bg2:#060e15;--text:#d4e8d8;--muted:rgba(212,232,216,0.48);}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;overflow:hidden;}
+.gridbg{position:fixed;inset:0;background-image:linear-gradient(rgba(32,201,122,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(32,201,122,0.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.scan{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.055) 2px,rgba(0,0,0,0.055) 4px);pointer-events:none;z-index:1;}
+.page{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;text-align:center;z-index:10;opacity:0;pointer-events:none;transition:opacity .45s ease;overflow-y:auto;}
+.page.active{opacity:1;pointer-events:all;}
+@keyframes slideIn{from{opacity:0;transform:translateX(36px);}to{opacity:1;transform:translateX(0);}}
+@keyframes slideOut{from{opacity:1;transform:translateX(0);}to{opacity:0;transform:translateX(-36px);}}
+.slide-in{animation:slideIn .4s ease forwards;}
+.slide-out{animation:slideOut .32s ease forwards;}
+@keyframes glitch{0%,93%,100%{text-shadow:none;}94%{text-shadow:-2px 0 rgba(255,0,60,.5),2px 0 rgba(0,255,160,.5);transform:translateX(1px);}96%{transform:translateX(-1px);}98%{transform:none;}}
+.glitch{animation:glitch 5s infinite;}
+@keyframes blink2{0%,100%{opacity:1;}50%{opacity:.2;}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.1;}}
+.gd{color:var(--g);}
+
+/* ALERT */
+.alert-warn{font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(224,74,74,0.75);letter-spacing:4px;margin-bottom:18px;animation:blink2 1.2s infinite;}
+.alert-title{font-family:'Orbitron',monospace;font-size:36px;font-weight:900;color:#fff;letter-spacing:7px;line-height:1;margin-bottom:8px;}
+.alert-sub{font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(32,201,122,0.42);letter-spacing:3px;margin-bottom:28px;}
+.alert-box{background:rgba(224,74,74,0.05);border:1px solid rgba(224,74,74,0.18);border-radius:3px;padding:18px 20px;max-width:300px;margin-bottom:26px;}
+.alert-box p{font-size:14px;color:rgba(212,232,216,0.78);line-height:1.8;}
+.alert-box strong{color:var(--g);}
+.btn{padding:13px 28px;border:1px solid rgba(32,201,122,0.4);background:rgba(32,201,122,0.08);color:var(--g);font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:3px;cursor:pointer;border-radius:2px;transition:all .2s;width:100%;}
+.btn:active{background:rgba(32,201,122,0.22);}
+.btn-red{border-color:rgba(224,74,74,0.4);background:rgba(224,74,74,0.06);color:rgba(224,74,74,0.85);}
+
+/* PASSWORD */
+.pw-title{font-family:'Orbitron',monospace;font-size:14px;color:var(--g);letter-spacing:3px;margin-bottom:6px;}
+.pw-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(32,201,122,0.35);letter-spacing:3px;margin-bottom:28px;}
+.pw-box{width:100%;max-width:280px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:20px;}
+.pw-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.3);letter-spacing:3px;margin-bottom:10px;text-align:left;}
+.pw-in{width:100%;background:rgba(32,201,122,0.04);border:1px solid rgba(32,201,122,0.2);border-radius:2px;padding:12px 14px;font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--g);letter-spacing:2px;outline:none;-webkit-appearance:none;transition:border-color .2s;margin-bottom:8px;}
+.pw-in:focus{border-color:rgba(32,201,122,0.5);}
+.pw-in::placeholder{color:rgba(32,201,122,0.15);font-size:13px;}
+.pw-err{font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(224,74,74,0.7);min-height:14px;margin-bottom:8px;text-align:left;}
+
+/* LOAD */
+.load-pct{font-family:'Orbitron',monospace;font-size:52px;font-weight:900;color:var(--g);letter-spacing:2px;margin-bottom:8px;}
+.load-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(32,201,122,0.35);letter-spacing:3px;margin-bottom:18px;}
+.lbar-wrap{width:240px;height:3px;background:rgba(32,201,122,0.08);border:1px solid rgba(32,201,122,0.14);margin-bottom:10px;overflow:hidden;}
+.lbar{height:100%;background:var(--g);width:0;transition:width .05s linear;}
+.lmsg{font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(32,201,122,0.35);letter-spacing:1.5px;height:14px;}
+
+/* NAME */
+.name-title{font-family:'Orbitron',monospace;font-size:40px;font-weight:900;color:#fff;letter-spacing:8px;margin-bottom:6px;}
+.name-full{font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(32,201,122,0.42);letter-spacing:3px;margin-bottom:22px;}
+.name-desc{font-size:13px;color:var(--muted);line-height:1.8;max-width:270px;margin:0 auto 26px;}
+
+/* CARD */
+.cp-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(32,201,122,0.32);letter-spacing:3px;margin-bottom:16px;}
+.cp-stage{font-family:'Orbitron',monospace;font-size:12px;color:#fff;letter-spacing:2px;margin-bottom:14px;}
+.play-card{width:210px;height:290px;background:linear-gradient(145deg,#0c1f12,#071009);border:1px solid rgba(32,201,122,0.22);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;position:relative;margin:0 auto 16px;cursor:pointer;transition:transform .15s;}
+.play-card:active{transform:scale(0.97);}
+.play-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(32,201,122,0.3),transparent);border-radius:12px 12px 0 0;}
+.pc-suit{font-size:48px;line-height:1;}
+.pc-value{font-family:'Orbitron',monospace;font-size:40px;font-weight:900;color:var(--g);letter-spacing:2px;}
+.pc-suit-name{font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(32,201,122,0.38);letter-spacing:3px;}
+.pc-meaning{font-size:11px;color:rgba(212,232,216,0.42);font-style:italic;padding:0 18px;text-align:center;line-height:1.5;}
+.card-corner{position:absolute;font-family:'Orbitron',monospace;font-size:11px;color:rgba(32,201,122,0.28);}
+.card-corner.tl{top:12px;left:14px;}
+.card-corner.br{bottom:12px;right:14px;transform:rotate(180deg);}
+.cp-hint{font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(32,201,122,0.28);letter-spacing:2px;}
+.dots{display:flex;justify-content:center;gap:8px;padding:8px 0;}
+.dot{width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(32,201,122,0.15);}
+.dot.done{background:rgba(32,201,122,0.4);border-color:var(--g);}
+.dot.active{background:var(--g);border-color:var(--g);box-shadow:0 0 7px rgba(32,201,122,0.5);}
+
+/* STAGE */
+.stage-page{justify-content:flex-start;padding:0;}
+.topbar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(3,10,15,0.97);flex-shrink:0;}
+.tb-id{font-family:'Orbitron',monospace;font-size:9px;color:var(--g);letter-spacing:2px;}
+.tb-id span{color:rgba(32,201,122,0.28);}
+.tb-pill{display:flex;align-items:center;gap:5px;background:var(--gs);border:1px solid rgba(32,201,122,0.2);border-radius:2px;padding:3px 9px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--g);}
+.pdot{width:5px;height:5px;background:var(--g);border-radius:50%;animation:blink 1.4s infinite;}
+.clkdsp{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);}
+.cdbar{width:100%;padding:9px 16px;background:rgba(32,201,122,0.03);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.cd-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.3);letter-spacing:2px;}
+.cd-time{font-family:'Orbitron',monospace;font-size:15px;color:var(--g);font-weight:700;letter-spacing:2px;}
+.cd-time.warn{color:rgba(240,168,50,0.9);}
+.cd-time.danger{color:rgba(224,74,74,0.9);animation:blink2 .8s infinite;}
+.cd-prog{width:70px;height:3px;background:rgba(32,201,122,0.08);border-radius:1px;overflow:hidden;}
+.cd-fill{height:100%;background:var(--g);transition:width 1s linear;}
+.stage-inner{flex:1;overflow-y:auto;width:100%;-webkit-overflow-scrolling:touch;}
+.sh{padding:16px 16px 10px;text-align:center;}
+.sh-suit{font-size:26px;margin-bottom:5px;}
+.sh-num{font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(32,201,122,0.34);letter-spacing:4px;margin-bottom:3px;}
+.sh-name{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:#fff;letter-spacing:2px;}
+.s-card{margin:8px 14px;background:linear-gradient(135deg,rgba(32,201,122,0.05),rgba(32,201,122,0.015));border:1px solid rgba(32,201,122,0.17);border-radius:3px;padding:14px;position:relative;}
+.s-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(32,201,122,0.28),transparent);}
+.sc-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.28);letter-spacing:3px;margin-bottom:6px;}
+.sc-txt{font-size:13px;color:rgba(212,232,216,0.82);line-height:1.75;font-style:italic;}
+
+/* MAP */
+.map-block{margin:1px 14px;background:var(--bg2);border:1px solid var(--border);overflow:hidden;}
+.map-header{padding:8px 12px;display:flex;align-items:center;justify-content:space-between;background:rgba(32,201,122,0.03);}
+.map-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.32);letter-spacing:2px;}
+.map-live{display:flex;align-items:center;gap:5px;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--g);letter-spacing:1px;}
+.live-dot{width:5px;height:5px;border-radius:50%;background:#20c97a;animation:blink 1s infinite;}
+.map-container{width:100%;height:200px;position:relative;}
+.loc-bar{padding:6px 12px;font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(32,201,122,0.45);letter-spacing:1px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;}
+.leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(0.7) saturate(0.6);}
+.leaflet-control-attribution{display:none!important;}
+.leaflet-control-zoom a{background:#060e15!important;color:#20c97a!important;border-color:rgba(32,201,122,0.2)!important;}
+
+/* TIME/CODE */
+.tblock{margin:1px 14px;background:var(--bg2);border:1px solid var(--border);padding:11px 14px;display:flex;align-items:center;gap:12px;}
+.tb-icon{font-size:17px;}
+.tb-lbl2{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.28);letter-spacing:2px;margin-bottom:2px;}
+.tb-val{font-family:'Orbitron',monospace;font-size:14px;color:var(--g);font-weight:700;}
+.cblock{margin:1px 14px;background:var(--bg2);border:1px solid var(--border);padding:13px;}
+.cb-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.28);letter-spacing:3px;margin-bottom:8px;}
+.cb-row{display:flex;gap:7px;}
+.cb-in{flex:1;background:rgba(32,201,122,0.04);border:1px solid rgba(32,201,122,0.2);border-radius:2px;padding:12px;font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--g);letter-spacing:6px;outline:none;text-align:center;-webkit-appearance:none;transition:border-color .2s;}
+.cb-in:focus{border-color:rgba(32,201,122,0.5);}
+.cb-in::placeholder{color:rgba(32,201,122,0.12);font-size:14px;letter-spacing:2px;}
+.cb-btn{padding:12px 13px;border:1px solid rgba(32,201,122,0.35);background:rgba(32,201,122,0.08);color:var(--g);font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;border-radius:2px;white-space:nowrap;}
+.cb-btn:active{background:rgba(32,201,122,0.2);}
+.cb-fb{font-family:'Share Tech Mono',monospace;font-size:10px;min-height:14px;margin-top:7px;}
+.cb-fb.ok{color:var(--g);}
+.cb-fb.err{color:rgba(224,74,74,0.8);}
+.nc{display:none;margin:1px 14px;background:rgba(240,168,50,0.04);border:1px solid rgba(240,168,50,0.17);padding:12px 14px;}
+.nc-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(240,168,50,0.38);letter-spacing:3px;margin-bottom:5px;}
+.nc-txt{font-size:13px;color:rgba(240,168,50,0.68);line-height:1.65;font-style:italic;}
+.gap{height:22px;}
+
+/* FINAL */
+#p-final{overflow-y:auto;justify-content:flex-start;padding-top:36px;padding-bottom:30px;}
+.particles{position:fixed;inset:0;pointer-events:none;z-index:5;}
+.particle{position:absolute;font-size:17px;animation:fall linear infinite;}
+@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:.9;}100%{transform:translateY(105vh) rotate(720deg);opacity:0;}}
+.final-badge{width:78px;height:78px;border-radius:50%;border:2px solid rgba(32,201,122,0.35);background:rgba(32,201,122,0.06);display:flex;align-items:center;justify-content:center;font-size:33px;margin:0 auto 18px;}
+.final-t{font-family:'Orbitron',monospace;font-size:19px;font-weight:900;color:var(--g);letter-spacing:3px;margin-bottom:4px;}
+.final-s{font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(32,201,122,0.32);letter-spacing:4px;margin-bottom:16px;}
+.final-deck{display:flex;justify-content:center;gap:9px;margin-bottom:16px;flex-wrap:wrap;}
+.fd-card{background:linear-gradient(145deg,#0c1f12,#071009);border:1px solid rgba(32,201,122,0.2);border-radius:8px;padding:11px 13px;text-align:center;min-width:52px;}
+.fd-suit{font-size:19px;margin-bottom:3px;}
+.fd-val{font-family:'Orbitron',monospace;font-size:17px;font-weight:900;color:var(--g);}
+.final-cd{font-family:'Orbitron',monospace;font-size:26px;color:#fff;letter-spacing:9px;background:rgba(32,201,122,0.07);border:1px solid rgba(32,201,122,0.2);padding:11px 18px;border-radius:3px;margin-bottom:20px;}
+.final-msg{font-size:14px;color:var(--muted);line-height:2.1;max-width:275px;margin:0 auto;}
+.final-msg strong{color:var(--g);}
+.final-foot{margin-top:22px;font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.16);letter-spacing:3px;}
+
+/* ══ POPUP ══ */
+#popup-overlay{position:fixed;inset:0;background:rgba(3,10,15,0.9);z-index:800;display:none;align-items:center;justify-content:center;padding:24px;animation:fadeIn .3s ease;}
+#popup-overlay.show{display:flex;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.popup-box{background:#060e15;border:1px solid rgba(32,201,122,0.35);border-radius:6px;padding:22px 20px;max-width:300px;width:100%;text-align:center;position:relative;animation:popIn .35s ease;}
+@keyframes popIn{from{transform:scale(0.88);opacity:0;}to{transform:scale(1);opacity:1;}}
+.popup-box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(32,201,122,0.45),transparent);}
+.popup-type{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.35);letter-spacing:3px;margin-bottom:6px;}
+.popup-icon-big{font-size:30px;margin-bottom:10px;}
+.popup-from{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.4);letter-spacing:2px;margin-bottom:12px;}
+.popup-msg-txt{font-size:15px;color:var(--text);line-height:1.75;margin-bottom:16px;}
+/* voice msg player */
+.voice-player{background:rgba(32,201,122,0.05);border:1px solid rgba(32,201,122,0.15);border-radius:4px;padding:12px;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.vp-btn{width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(32,201,122,0.4);background:rgba(32,201,122,0.1);color:var(--g);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.vp-btn:active{background:rgba(32,201,122,0.25);}
+.vp-bar-wrap{flex:1;}
+.vp-label{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.4);letter-spacing:2px;margin-bottom:4px;}
+.vp-wave{height:24px;display:flex;align-items:center;gap:2px;}
+.vp-bar-a{width:3px;border-radius:2px;background:var(--g);opacity:0.5;}
+.popup-reply-in{width:100%;background:rgba(32,201,122,0.04);border:1px solid rgba(32,201,122,0.18);border-radius:2px;padding:10px;font-family:'Rajdhani',sans-serif;font-size:14px;color:var(--text);outline:none;margin-bottom:10px;resize:none;height:60px;}
+.popup-reply-in::placeholder{color:rgba(212,232,216,0.2);}
+.popup-btns{display:flex;gap:8px;}
+.popup-close{flex:1;padding:10px;border:1px solid rgba(32,201,122,0.28);background:rgba(32,201,122,0.07);color:var(--g);font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:2px;cursor:pointer;border-radius:2px;}
+.popup-close:active{background:rgba(32,201,122,0.18);}
+.popup-send{flex:1;padding:10px;border:1px solid rgba(32,201,122,0.4);background:rgba(32,201,122,0.14);color:var(--g);font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;border-radius:2px;}
+.popup-send:active{background:rgba(32,201,122,0.28);}
+
+/* ══ ADMIN ══ */
+#p-admin{background:var(--bg);z-index:900;justify-content:flex-start;padding-top:22px;padding-bottom:28px;overflow-y:auto;}
+.adm-title{font-family:'Orbitron',monospace;font-size:11px;color:var(--g);letter-spacing:3px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:9px;width:100%;max-width:340px;text-align:left;}
+.adm-card{background:var(--bg2);border:1px solid var(--border);border-radius:2px;padding:13px;margin-bottom:7px;width:100%;max-width:340px;text-align:left;}
+.adm-card h3{font-family:'Share Tech Mono',monospace;font-size:8px;color:rgba(32,201,122,0.38);letter-spacing:2px;margin-bottom:9px;}
+.adm-info{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);line-height:1.9;}
+.adm-info strong{color:var(--g);}
+.adm-map-wrap{width:100%;height:200px;margin-top:9px;border:1px solid var(--border);overflow:hidden;}
+.adm-btn{width:100%;padding:10px;border:1px solid rgba(32,201,122,0.25);background:rgba(32,201,122,0.06);color:var(--g);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;border-radius:2px;margin-top:6px;letter-spacing:1px;text-align:center;display:block;}
+.adm-btn:active{background:rgba(32,201,122,0.15);}
+.adm-btn.amber{border-color:rgba(240,168,50,0.3);color:rgba(240,168,50,0.8);}
+.adm-btn.red{border-color:rgba(224,74,74,0.25);color:rgba(224,74,74,0.65);}
+.adm-sep{height:1px;background:var(--border);margin:8px 0;}
+/* msg composer */
+.msg-type-row{display:flex;gap:6px;margin-bottom:8px;}
+.msg-type-btn{flex:1;padding:7px;border:1px solid rgba(32,201,122,0.18);background:transparent;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:9px;cursor:pointer;border-radius:2px;text-align:center;transition:all .2s;}
+.msg-type-btn.sel{border-color:rgba(32,201,122,0.5);background:rgba(32,201,122,0.1);color:var(--g);}
+.reply-toggle{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);}
+.toggle-sw{width:36px;height:20px;background:rgba(32,201,122,0.08);border:1px solid rgba(32,201,122,0.2);border-radius:10px;position:relative;cursor:pointer;transition:all .2s;}
+.toggle-sw.on{background:rgba(32,201,122,0.25);border-color:rgba(32,201,122,0.5);}
+.toggle-knob{position:absolute;top:3px;left:3px;width:13px;height:13px;background:var(--muted);border-radius:50%;transition:all .2s;}
+.toggle-sw.on .toggle-knob{left:19px;background:var(--g);}
+.msg-area{width:100%;background:rgba(32,201,122,0.04);border:1px solid rgba(32,201,122,0.18);border-radius:2px;padding:10px;font-family:'Rajdhani',sans-serif;font-size:14px;color:var(--text);outline:none;resize:none;height:68px;margin-bottom:6px;}
+.msg-area::placeholder{color:rgba(212,232,216,0.2);}
+/* voice record */
+.voice-rec-row{display:flex;align-items:center;gap:10px;background:rgba(32,201,122,0.04);border:1px solid rgba(32,201,122,0.15);border-radius:2px;padding:10px;margin-bottom:6px;}
+.rec-btn{width:42px;height:42px;border-radius:50%;border:2px solid rgba(224,74,74,0.5);background:rgba(224,74,74,0.08);color:rgba(224,74,74,0.8);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+.rec-btn.recording{background:rgba(224,74,74,0.25);border-color:rgba(224,74,74,0.9);animation:blink2 .7s infinite;}
+.rec-status{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);}
+.rec-time{font-family:'Orbitron',monospace;font-size:14px;color:rgba(224,74,74,0.8);display:none;}
+/* pin on map */
+.pin-instructions{font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(32,201,122,0.35);letter-spacing:1px;margin-top:7px;line-height:1.6;}
+.pin-list{margin-top:8px;display:flex;flex-direction:column;gap:4px;max-height:100px;overflow-y:auto;}
+.pin-item{display:flex;align-items:center;gap:8px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);background:rgba(32,201,122,0.03);border:1px solid rgba(32,201,122,0.1);padding:5px 8px;border-radius:2px;}
+.pin-del{color:rgba(224,74,74,0.5);cursor:pointer;margin-left:auto;font-size:14px;line-height:1;}
+.adm-close{margin-top:10px;font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(224,74,74,0.5);cursor:pointer;letter-spacing:2px;border:1px solid rgba(224,74,74,0.15);padding:8px 20px;border-radius:2px;max-width:340px;width:100%;text-align:center;}
+</style>
+</head>
+<body>
+<div class="gridbg"></div>
+<div class="scan"></div>
+
+<!-- ALERT -->
+<div class="page active" id="p-alert">
+  <div class="alert-warn">⚠ SYSTEM ALERT ⚠</div>
+  <h1 class="alert-title glitch">A<span class="gd">.</span>I<span class="gd">.</span>L<span class="gd">.</span>L</h1>
+  <p class="alert-sub">Anaya in Loop Layer</p>
+  <div class="alert-box">
+    <p>You have been trapped into <strong>A.I.L.L</strong><br>There is no escape until the final code is entered.</p>
+  </div>
+  <button class="btn btn-red" onclick="go('p-pw')">ACCEPT THE LOOP ▶</button>
+</div>
+
+<!-- PASSWORD -->
+<div class="page" id="p-pw">
+  <svg width="56" height="56" viewBox="0 0 90 90" style="margin-bottom:18px;">
+    <polygon points="45,4 83,24 83,66 45,86 7,66 7,24" fill="none" stroke="rgba(32,201,122,0.28)" stroke-width="1.5"/>
+    <text x="45" y="53" text-anchor="middle" font-family="Orbitron" font-size="14" font-weight="900" fill="#20c97a">AI</text>
+  </svg>
+  <div class="pw-title">// ACCESS REQUIRED</div>
+  <p class="pw-sub">IDENTITY VERIFICATION</p>
+  <div class="pw-box">
+    <div class="pw-lbl">ENTER LOOP PASSWORD</div>
+    <input class="pw-in" id="pw-in" type="password" placeholder="enter password..." autocomplete="off"/>
+    <div class="pw-err" id="pw-err"></div>
+    <button class="btn" onclick="checkPw()">VERIFY ▶</button>
+  </div>
+</div>
+
+<!-- LOAD -->
+<div class="page" id="p-load">
+  <div class="load-pct" id="lpct">0%</div>
+  <div class="load-lbl">INITIALIZING LOOP LAYER</div>
+  <div class="lbar-wrap"><div class="lbar" id="lbar"></div></div>
+  <div class="lmsg" id="lmsg">SCANNING...</div>
+</div>
+
+<!-- NAME -->
+<div class="page" id="p-name">
+  <svg width="68" height="68" viewBox="0 0 90 90" style="margin-bottom:20px;">
+    <polygon points="45,4 83,24 83,66 45,86 7,66 7,24" fill="none" stroke="rgba(32,201,122,0.28)" stroke-width="1.5"/>
+    <polygon points="45,16 71,31 71,59 45,74 19,59 19,31" fill="none" stroke="rgba(32,201,122,0.1)" stroke-width="1"/>
+    <text x="45" y="53" text-anchor="middle" font-family="Orbitron" font-size="14" font-weight="900" fill="#20c97a">AI</text>
+  </svg>
+  <h1 class="name-title glitch">A<span class="gd">.</span>I<span class="gd">.</span>L<span class="gd">.</span>L</h1>
+  <p class="name-full">Anaya in Loop Layer</p>
+  <p class="name-desc">5 stages. 5 hours. Hidden across campus.<br>Each card holds a clue. Each code unlocks the next layer.<br>The loop has already begun.</p>
+  <button class="btn" onclick="goCard(0)">BEGIN LOOP ▶</button>
+</div>
+
+<!-- FINAL -->
+<div class="page" id="p-final">
+  <div class="particles" id="particles"></div>
+  <div class="final-badge">🎂</div>
+  <div class="final-t glitch">LOOP CLOSED</div>
+  <div class="final-s">A.I.L.L SYSTEM COMPLETE</div>
+  <div class="final-deck">
+    <div class="fd-card"><div class="fd-suit">♠</div><div class="fd-val">6</div></div>
+    <div class="fd-card"><div class="fd-suit">♣</div><div class="fd-val">2</div></div>
+    <div class="fd-card"><div class="fd-suit">♦</div><div class="fd-val">8</div></div>
+    <div class="fd-card"><div class="fd-suit">♥</div><div class="fd-val">4</div></div>
+  </div>
+  <div class="final-cd">6 2 8 4</div>
+  <p class="final-msg">
+    Anaya —<br><br>
+    Poora din tumhare saath tha.<br>
+    Har clue, har card, har lamha.<br><br>
+    Yeh sab sirf isliye tha<br>
+    kyunki tum kuch khaas ho.<br><br>
+    <strong>Happy Birthday! 🌷</strong>
+  </p>
+  <div class="final-foot">A.I.L.L v1.0 · LOOP TERMINATED</div>
+  <div class="gap"></div>
+</div>
+
+<!-- ══ POPUP (admin → Anaya) ══ -->
+<div id="popup-overlay">
+  <div class="popup-box" id="popup-box">
+    <div class="popup-type" id="popup-type">// SYSTEM MESSAGE</div>
+    <div class="popup-icon-big" id="popup-icon">💬</div>
+    <div class="popup-from">// FROM: LOOP SYSTEM</div>
+    <!-- text msg -->
+    <div id="popup-text-area">
+      <div class="popup-msg-txt" id="popup-msg-txt"></div>
+    </div>
+    <!-- voice msg -->
+    <div id="popup-voice-area" style="display:none;">
+      <div class="voice-player">
+        <button class="vp-btn" id="vp-play-btn" onclick="toggleVoicePlay()">▶</button>
+        <div class="vp-bar-wrap">
+          <div class="vp-label">VOICE MESSAGE — ENCODED</div>
+          <div class="vp-wave" id="vp-wave"></div>
+        </div>
+      </div>
+    </div>
+    <!-- reply input -->
+    <div id="popup-reply-wrap" style="display:none;">
+      <textarea class="popup-reply-in" id="popup-reply-in" placeholder="Type your reply..."></textarea>
+    </div>
+    <div class="popup-btns">
+      <button class="popup-close" id="popup-dismiss-btn" onclick="dismissPopup()">OK ✓</button>
+      <button class="popup-send" id="popup-reply-btn" style="display:none;" onclick="sendReply()">REPLY ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN ══ -->
+<div class="page" id="p-admin">
+  <div class="adm-title">// A.I.L.L — ADMIN CONTROL</div>
+
+  <!-- STATUS -->
+  <div class="adm-card">
+    <h3>GAME STATUS</h3>
+    <div class="adm-info" id="adm-status">—</div>
+  </div>
+
+  <!-- MAP + PINS -->
+  <div class="adm-card">
+    <h3>ANAYA LIVE LOCATION + PIN DROPS</h3>
+    <div class="adm-info" id="adm-loc-info">Waiting...</div>
+    <div class="adm-map-wrap" id="adm-map-wrap"></div>
+    <div class="pin-instructions">📌 TAP ON MAP TO DROP A PIN — Anaya ke liye location mark karo</div>
+    <div class="pin-list" id="pin-list"></div>
+    <button class="adm-btn" onclick="adminRefresh()">↻ REFRESH LOCATION</button>
+    <button class="adm-btn" onclick="clearAllPins()">🗑 CLEAR ALL PINS</button>
+  </div>
+
+  <!-- MSG COMPOSER -->
+  <div class="adm-card">
+    <h3>SEND MESSAGE → ANAYA'S SCREEN</h3>
+    <!-- type: text / voice -->
+    <div class="msg-type-row">
+      <div class="msg-type-btn sel" id="mt-text" onclick="setMsgType('text')">💬 TEXT</div>
+      <div class="msg-type-btn" id="mt-voice" onclick="setMsgType('voice')">🎤 VOICE</div>
+    </div>
+    <!-- text compose -->
+    <div id="adm-text-compose">
+      <textarea class="msg-area" id="adm-msg-in" placeholder="Message likho — Anaya ke screen par popup aayega..."></textarea>
+    </div>
+    <!-- voice compose -->
+    <div id="adm-voice-compose" style="display:none;">
+      <div class="voice-rec-row">
+        <button class="rec-btn" id="rec-btn" onclick="toggleRecord()">🎤</button>
+        <div>
+          <div class="rec-status" id="rec-status">Press to record voice message</div>
+          <div class="rec-time" id="rec-time">00:00</div>
+        </div>
+      </div>
+    </div>
+    <!-- reply toggle -->
+    <div class="reply-toggle">
+      <div class="toggle-sw" id="reply-toggle" onclick="toggleReply()"><div class="toggle-knob"></div></div>
+      <span id="reply-lbl">No reply (one-way)</span>
+    </div>
+    <button class="adm-btn amber" onclick="adminSendMsg()">📨 SEND TO ANAYA</button>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="adm-card">
+    <h3>STAGE CONTROLS</h3>
+    <button class="adm-btn" onclick="adminForce()">→ FORCE NEXT STAGE</button>
+    <div class="adm-sep"></div>
+    <button class="adm-btn red" onclick="adminReset()">⚠ RESET GAME</button>
+  </div>
+
+  <div class="adm-close" onclick="adminClose()">✕ EXIT ADMIN</div>
+  <div class="gap"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// CONFIG
+const PW_ANAYA = 'bulbul';
+const PW_ADMIN = 'manilovebulbul';
+const BUITEMS  = {lat:30.269186375337014, lng:66.94409602184669};
+
+const STAGES=[
+  {id:1,suit:'♠',suitEmoji:'🌿 ♠️',suitBig:'♠',name:'Echo of First Sight',label:'STAGE 01 OF 05',val:'6',suitName:'SPADES',meaning:'Mind / Beginning',quote:'"Some journeys begin where our eyes first met, with a passing smile."',time:'09:00 — 09:45',icon:'🕘',code:'4654',clue:'"Next layer lies where silence holds answers more than words."',dots:[1,0,0,0,0]},
+  {id:2,suit:'♣',suitEmoji:'📚 ♣️',suitBig:'♣',name:'Silence Layer',label:'STAGE 02 OF 05',val:'2',suitName:'CLUBS',meaning:'Discovery / Knowledge',quote:'"Where silence holds answers more than words."',time:'10:00 — 11:00',icon:'🕙',code:'6719',clue:'"Where conversations happen over bites, and time slows down."',dots:[2,1,0,0,0]},
+  {id:3,suit:'♦',suitEmoji:'☕ ♦️',suitBig:'♦',name:'Observation Layer',label:'STAGE 03 OF 05',val:'8',suitName:'DIAMONDS',meaning:'Observation / Hidden Truth',quote:'"Where conversations happen over bites, and time slows down."',time:'12:30 — 13:30',icon:'🕐',code:'7314',clue:'"The place we visit every day with a lot of patience."',dots:[2,2,1,0,0]},
+  {id:4,suit:'♥',suitEmoji:'♥️',suitBig:'♥',name:'Memory Layer',label:'STAGE 04 OF 05',val:'4',suitName:'HEARTS',meaning:'Memory / Connection',quote:'"The place we visit every day with a lot of patience."',time:'14:00 — 15:30',icon:'🕑',code:'8274',clue:'"Final layer waits where paths quietly separate."',dots:[2,2,2,1,0]},
+  {id:5,suit:'🃏',suitEmoji:'🚏 🃏',suitBig:'🃏',name:'The Separation Gate',label:'STAGE 05 OF 05',val:'?',suitName:'JOKER',meaning:'Everything Comes Together',quote:'"A place where we often wait, and paths quietly separate."',time:'16:30 — 17:00',icon:'🕔',code:'6284',clue:'',dots:[2,2,2,2,1]}
+];
+
+// ── STATE ──────────────────────────────────────────────
+let current='p-alert', currentStageIdx=0, prevPage='p-alert';
+let timers={}, watchId=null, stageMaps={};
+let adminMap=null, adminMarker=null, adminBuitemsCircle=null;
+let adminPins=[], pinMarkers=[];
+let msgCheckInterval=null, serverSyncInterval=null;
+let mediaRec=null, recChunks=[], recTimer=null, recSecs=0;
+let isRecording=false, replyEnabled=false, msgType='text';
+let voiceBlob=null, currentVoiceUrl=null, vpAudio=null;
+
+// Use deployed Railway backend
+const API_BASE = 'https://the-game-persronal-production.up.railway.app/api';
+const WS_BASE = 'wss://the-game-persronal-production.up.railway.app/ws';
+let socket = null; let socketClientType = null;
+let latestLocation = null; let pendingLocation = null; let lastMessageId = 0;
+
+async function fetchJson(path, options={}) {
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const resp = await fetch(url, options);
+  if (!resp.ok) {
+    const text = await resp.text().catch(()=>resp.statusText || 'error');
+    throw new Error(`Fetch failed ${resp.status}: ${text}`);
+  }
+  return resp.json();
+}
+
+async function connectSocket(type) {
+  socketClientType = type;
+  if (socket) {
+    try { socket.close(); } catch(e) {}
+    socket = null;
+  }
+  socket = new WebSocket(`${WS_BASE}/${type}`);
+  socket.addEventListener('open', async () => {
+    console.log('WS connected', type);
+    await syncWithServer();
+    if (pendingLocation) {
+      await sendLocation(pendingLocation.lat, pendingLocation.lng, pendingLocation.acc);
+      pendingLocation = null;
+    }
+  });
+  socket.addEventListener('message', e => {
+    try { handleSocketMessage(JSON.parse(e.data)); }
+    catch(err){ console.warn('WS parse error', err); }
+  });
+  socket.addEventListener('close', () => {
+    console.log('WS disconnected, reconnecting...');
+    setTimeout(()=>connectSocket(type), 1500);
+  });
+  socket.addEventListener('error', err => console.warn('WS error', err));
+}
+
+function handleSocketMessage(data) {
+  if (!data || !data.type) return;
+  if (data.type === 'state') {
+    if (Array.isArray(data.pins)) {
+      adminPins = data.pins;
+      renderPinList();
+      Object.keys(stageMaps).forEach(i=>redrawPinsOnStageMap(parseInt(i)));
+    }
+    if (data.location) {
+      latestLocation = data.location;
+      updateAdminMarker();
+      updateAdminInfo();
+    }
+    if (Array.isArray(data.unread_messages) && data.unread_messages.length) {
+      data.unread_messages.forEach(msg=>showPopup(msg));
+    }
+    return;
+  }
+  if (data.type === 'pin' && data.pin) {
+    adminPins.push(data.pin);
+    renderPinList();
+    Object.keys(stageMaps).forEach(i=>redrawPinsOnStageMap(parseInt(i)));
+    return;
+  }
+  if (data.type === 'location' && data.location) {
+    latestLocation = data.location;
+    updateAdminMarker();
+    updateAdminInfo();
+    return;
+  }
+  if (data.type === 'message' && data.payload) {
+    showPopup(data.payload);
+    return;
+  }
+  if (data.type === 'reply' && data.reply) {
+    if (socketClientType === 'admin') {
+      const notif = document.createElement('div');
+      notif.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#060e15;border:1px solid rgba(32,201,122,0.4);border-radius:4px;padding:10px 16px;font-family:Share Tech Mono,monospace;font-size:11px;color:#20c97a;z-index:1000;letter-spacing:1px;';
+      notif.textContent = '💬 Anaya replied: ' + data.reply.msg;
+      document.body.appendChild(notif);
+      setTimeout(()=>notif.remove(),5000);
+    }
+    return;
+  }
+}
+
+async function syncWithServer() {
+  try {
+    const [pins, location, message] = await Promise.all([
+      fetchJson('/pins'),
+      fetchJson('/location'),
+      fetchJson('/messages/unread').catch(()=>null)
+    ]);
+    if (Array.isArray(pins)) {
+      adminPins = pins;
+      renderPinList();
+      Object.keys(stageMaps).forEach(i=>redrawPinsOnStageMap(parseInt(i)));
+    }
+    if (location?.lat && location?.lng) {
+      latestLocation = location;
+      updateAdminMarker();
+      updateAdminInfo();
+    }
+    if (message && message.id && message.id !== lastMessageId) {
+      lastMessageId = message.id;
+      showPopup(message);
+    }
+  } catch (e) {
+    console.warn('sync failed', e);
+  }
+}
+
+async function sendLocation(lat,lng,acc) {
+  latestLocation = {lat,lng,acc,stage:currentStageIdx+1,t:Date.now()};
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({type:'location',payload:latestLocation}));
+  }
+  try {
+    await fetchJson('/location', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({lat,lng,acc,stage:currentStageIdx+1})
+    });
+  } catch(e) {
+    console.warn('location submit failed', e);
+    pendingLocation = {lat,lng,acc};
+  }
+}
+
+// ── BUILD STAGE PAGES ──────────────────────────────────
+STAGES.forEach((s,i)=>{
+  const dh=s.dots.map(d=>`<div class="dot ${d===2?'done':d===1?'active':''}"></div>`).join('');
+  // card
+  const cp=document.createElement('div');
+  cp.className='page'; cp.id='p-card-'+i;
+  cp.innerHTML=`
+    <div class="cp-label">// STAGE ${s.id} CARD — TAP TO ENTER</div>
+    <div class="cp-stage">${s.label} · ${s.name}</div>
+    <div class="play-card" onclick="goStage(${i})">
+      <div class="card-corner tl">${s.suit}${s.val}</div>
+      <div class="pc-suit">${s.suitBig}</div>
+      <div class="pc-value">${s.val}</div>
+      <div class="pc-suit-name">${s.suitName}</div>
+      <div class="pc-meaning">${s.meaning}</div>
+      <div class="card-corner br">${s.suit}${s.val}</div>
+    </div>
+    <div class="dots">${dh}</div>
+    <div class="cp-hint">TAP CARD TO ENTER STAGE ${s.id} ↑</div>`;
+  document.body.appendChild(cp);
+  // stage
+  const sp=document.createElement('div');
+  sp.className='page stage-page'; sp.id='p-stage-'+i;
+  sp.innerHTML=`
+    <div class="topbar">
+      <div class="tb-id">LOOP<span>//</span>LAYER</div>
+      <div class="tb-pill"><div class="pdot"></div>STAGE ${s.id}/5</div>
+      <div class="clkdsp" id="clk${i}">--:--</div>
+    </div>
+    <div class="cdbar">
+      <div class="cd-lbl">STAGE TIME</div>
+      <div class="cd-time" id="cd${i}">01:00:00</div>
+      <div class="cd-prog"><div class="cd-fill" id="cdf${i}" style="width:100%"></div></div>
+    </div>
+    <div class="stage-inner">
+      <div class="sh">
+        <div class="sh-suit">${s.suitEmoji}</div>
+        <div class="sh-num">${s.label}</div>
+        <div class="sh-name">${s.name}</div>
+      </div>
+      <div class="dots">${dh}</div>
+      <div class="s-card">
+        <div class="sc-lbl">// CARD — STAGE 0${s.id}</div>
+        <div class="sc-txt">${s.quote}</div>
+      </div>
+      <div class="map-block">
+        <div class="map-header">
+          <div class="map-lbl">// CAMPUS MAP</div>
+          <div class="map-live"><div class="live-dot"></div>LIVE TRACKING</div>
+        </div>
+        <div class="map-container" id="map${i}"></div>
+        <div class="loc-bar">📍 <span id="loc${i}">Requesting location...</span></div>
+      </div>
+      <div class="tblock">
+        <div class="tb-icon">${s.icon}</div>
+        <div><div class="tb-lbl2">ACTIVE WINDOW</div><div class="tb-val">${s.time}</div></div>
+      </div>
+      <div class="cblock">
+        <div class="cb-lbl">ENTER STAGE CODE</div>
+        <div class="cb-row">
+          <input class="cb-in" id="in${i}" type="tel" placeholder="— — — —" maxlength="4" inputmode="numeric"/>
+          <button class="cb-btn" onclick="verify(${i})">VERIFY</button>
+        </div>
+        <div class="cb-fb" id="fb${i}"></div>
+      </div>
+      ${s.clue?`<div class="nc" id="nc${i}"><div class="nc-lbl">// NEXT LAYER UNLOCKED</div><div class="nc-txt">${s.clue}</div></div>`:''}
+      <div class="gap"></div>
+    </div>`;
+  document.body.appendChild(sp);
+});
+
+// ── NAV ────────────────────────────────────────────────
+function go(pageId){
+  const cur=document.querySelector('.page.active');
+  if(cur){cur.classList.add('slide-out');setTimeout(()=>cur.classList.remove('active','slide-out'),320);}
+  setTimeout(()=>{
+    const nxt=document.getElementById(pageId);
+    nxt.classList.add('active','slide-in');
+    setTimeout(()=>nxt.classList.remove('slide-in'),420);
+    current=pageId; updateAllClocks();
+  },330);
+}
+
+// ── PASSWORD ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('pw-in').addEventListener('keydown',e=>{ if(e.key==='Enter') checkPw(); });
+});
+function checkPw(){
+  const v=document.getElementById('pw-in').value.trim();
+  const err=document.getElementById('pw-err');
+  document.getElementById('pw-in').value='';
+  if(v===PW_ADMIN){ openAdmin(); return; }
+  if(v===PW_ANAYA){ err.textContent=''; connectSocket('user'); startLoad(); return; }
+  err.textContent='× Wrong password — try again';
+  document.getElementById('pw-in').focus();
+}
+
+// ── BOOT LOAD ──────────────────────────────────────────
+const lmsgs=['SCANNING CAMPUS...','LOCATING ANAYA...','PLACING 5 TRAPS...','ENCRYPTING MYSTERIES...','SEALING THE LOOP...','LOOP LAYER ARMED.'];
+function startLoad(){
+  go('p-load');
+  let p=0,mi=0;
+  const bar=document.getElementById('lbar'),pct=document.getElementById('lpct'),msg=document.getElementById('lmsg');
+  const t=setInterval(()=>{
+    p+=1.4; bar.style.width=Math.min(p,100)+'%'; pct.textContent=Math.min(Math.round(p),100)+'%';
+    if(p%(100/lmsgs.length)<1.5&&mi<lmsgs.length) msg.textContent=lmsgs[mi++];
+    if(p>=100){clearInterval(t);setTimeout(()=>go('p-name'),600);}
+  },35);
+  startMsgPolling();
+}
+
+function goCard(i){currentStageIdx=i; go('p-card-'+i);}
+function goStage(i){
+  currentStageIdx=i; go('p-stage-'+i);
+  startTimer(i);
+  setTimeout(()=>{ initStageMap(i); startTracking(i); },500);
+}
+
+// ── STAGE MAPS ─────────────────────────────────────────
+function initStageMap(i){
+  if(stageMaps[i]) return;
+  const m=L.map('map'+i,{zoomControl:true,attributionControl:false,dragging:true,scrollWheelZoom:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(m);
+  m.setView([BUITEMS.lat,BUITEMS.lng],17);
+  // Red campus boundary circle
+  L.circle([BUITEMS.lat,BUITEMS.lng],{radius:400,color:'rgba(224,74,74,0.8)',weight:2,fill:false,dashArray:'6,4'}).addTo(m);
+  stageMaps[i]={map:m,userMarker:null,circle:null,pinMarkers:[]};
+  redrawPinsOnStageMap(i);
+}
+
+function redrawPinsOnStageMap(i){
+  const sm=stageMaps[i]; if(!sm) return;
+  sm.pinMarkers.forEach(p=>sm.map.removeLayer(p));
+  sm.pinMarkers=[];
+  adminPins.forEach(pin=>{
+    const pi=L.divIcon({html:`<div style="width:12px;height:12px;background:#f0a832;border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(240,168,50,0.8);"></div>`,iconSize:[12,12],iconAnchor:[6,6],className:''});
+    const mk=L.marker([pin.lat,pin.lng],{icon:pi}).addTo(sm.map);
+    if(pin.label) mk.bindPopup(pin.label);
+    sm.pinMarkers.push(mk);
+  });
+}
+
+// ── TRACKING ───────────────────────────────────────────
+function startTracking(i){
+  if(!navigator.geolocation){document.getElementById('loc'+i).textContent='Not supported';return;}
+  if(watchId!==null) navigator.geolocation.clearWatch(watchId);
+  watchId=navigator.geolocation.watchPosition(pos=>onLoc(pos,i),err=>onLocErr(err,i),{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+}
+function onLoc(pos,i){
+  const lat=pos.coords.latitude,lng=pos.coords.longitude,acc=Math.round(pos.coords.accuracy);
+  const el=document.getElementById('loc'+i);
+  if(el) el.textContent=`Tracked · ±${acc}m`;
+  const sm=stageMaps[i]; if(!sm) return;
+  const ui=L.divIcon({html:`<div style="width:14px;height:14px;background:#20c97a;border:2px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(32,201,122,0.8);"></div>`,iconSize:[14,14],iconAnchor:[7,7],className:''});
+  if(sm.userMarker){sm.userMarker.setLatLng([lat,lng]);if(sm.circle)sm.circle.setLatLng([lat,lng]).setRadius(acc);}
+  else{sm.userMarker=L.marker([lat,lng],{icon:ui,zIndexOffset:1000}).addTo(sm.map);sm.circle=L.circle([lat,lng],{radius:acc,color:'#20c97a',fillColor:'#20c97a',fillOpacity:0.07,weight:1}).addTo(sm.map);}
+  sm.map.panTo([lat,lng]);
+  sendLocation(lat,lng,acc);
+}
+function onLocErr(err,i){
+  const msgs={1:'Allow location access',2:'Location unavailable',3:'Retrying...'};
+  const el=document.getElementById('loc'+i);
+  if(el)el.textContent=msgs[err.code]||'Error';
+}
+
+// ── VERIFY ─────────────────────────────────────────────
+function verify(i){
+  const inp=document.getElementById('in'+i),fb=document.getElementById('fb'+i),v=inp.value.trim();
+  if(!v){fb.textContent='× Enter the code';fb.className='cb-fb err';return;}
+  if(v===STAGES[i].code){
+    fb.textContent='✓ Code accepted — layer unlocked.';fb.className='cb-fb ok';
+    inp.disabled=true; clearInterval(timers['t'+i]);
+    const nc=document.getElementById('nc'+i);if(nc)nc.style.display='block';
+    setTimeout(()=>{if(i<4)goCard(i+1);else goFinal();},2200);
+  }else{
+    fb.textContent='× Wrong code — try again.';fb.className='cb-fb err';
+    inp.style.borderColor='rgba(224,74,74,0.5)';
+    setTimeout(()=>{inp.style.borderColor='';},700);
+    inp.value='';inp.focus();
+  }
+}
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  for(let i=0;i<5;i++){if(current==='p-stage-'+i){verify(i);break;}}
+});
+
+// ── TIMER ──────────────────────────────────────────────
+const STAGE_SECS=3600;
+function startTimer(i){
+  if(timers['t'+i])clearInterval(timers['t'+i]);
+  let rem=STAGE_SECS;
+  const el=document.getElementById('cd'+i),fill=document.getElementById('cdf'+i);
+  timers['t'+i]=setInterval(()=>{
+    if(rem<=0){clearInterval(timers['t'+i]);return;}
+    rem--;
+    const h=Math.floor(rem/3600),m=Math.floor((rem%3600)/60),s=rem%60;
+    el.textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    fill.style.width=(rem/STAGE_SECS*100)+'%';
+    if(rem<=300){el.className='cd-time danger';fill.style.background='rgba(224,74,74,0.8)';}
+    else if(rem<=900){el.className='cd-time warn';fill.style.background='rgba(240,168,50,0.8)';}
+  },1000);
+}
+
+// ── POPUP SYSTEM ───────────────────────────────────────
+function startMsgPolling(){
+  if(msgCheckInterval) clearInterval(msgCheckInterval);
+  msgCheckInterval=setInterval(syncWithServer,2500);
+  syncWithServer();
+}
+
+function showPopup(d){
+  // reset
+  document.getElementById('popup-text-area').style.display='block';
+  document.getElementById('popup-voice-area').style.display='none';
+  document.getElementById('popup-reply-wrap').style.display='none';
+  document.getElementById('popup-reply-btn').style.display='none';
+  document.getElementById('popup-reply-in').value='';
+
+  if(d.voiceB64){
+    // VOICE MSG
+    document.getElementById('popup-type').textContent='// VOICE MESSAGE — ENCODED';
+    document.getElementById('popup-icon').textContent='🎤';
+    document.getElementById('popup-text-area').style.display='none';
+    document.getElementById('popup-voice-area').style.display='block';
+    // build wave visual
+    buildWave();
+    // prep audio
+    try{
+      const bin=atob(d.voiceB64);
+      const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      const blob=new Blob([bytes],{type:d.voiceMime||'audio/webm'});
+      currentVoiceUrl=URL.createObjectURL(blob);
+      // apply pitch shift via playbackRate (robot-ish)
+      vpAudio=new Audio(currentVoiceUrl);
+      vpAudio.preservesPitch=false;
+      vpAudio.playbackRate=0.72; // lower = deeper/robotic
+    }catch(e){ console.error(e); }
+  } else {
+    document.getElementById('popup-type').textContent='// SYSTEM MESSAGE';
+    document.getElementById('popup-icon').textContent='💬';
+    document.getElementById('popup-msg-txt').textContent=d.msg||'';
+  }
+
+  if(d.reply){
+    document.getElementById('popup-reply-wrap').style.display='block';
+    document.getElementById('popup-reply-btn').style.display='block';
+    document.getElementById('popup-dismiss-btn').textContent='SKIP';
+  } else {
+    document.getElementById('popup-dismiss-btn').textContent='OK ✓';
+  }
+
+  document.getElementById('popup-overlay').classList.add('show');
+}
+
+function buildWave(){
+  const wrap=document.getElementById('vp-wave'); wrap.innerHTML='';
+  for(let i=0;i<28;i++){
+    const b=document.createElement('div');
+    b.className='vp-bar-a';
+    const h=4+Math.random()*18;
+    b.style.height=h+'px';
+    b.style.opacity=0.3+Math.random()*0.5;
+    wrap.appendChild(b);
+  }
+}
+
+let vpPlaying=false;
+function toggleVoicePlay(){
+  const btn=document.getElementById('vp-play-btn');
+  if(!vpAudio){return;}
+  if(vpPlaying){vpAudio.pause();vpPlaying=false;btn.textContent='▶';}
+  else{vpAudio.play();vpPlaying=true;btn.textContent='⏸';
+    vpAudio.onended=()=>{vpPlaying=false;btn.textContent='▶';};
+  }
+}
+
+function dismissPopup(){
+  document.getElementById('popup-overlay').classList.remove('show');
+  if(vpAudio){vpAudio.pause();vpPlaying=false;}
+}
+
+async function sendReply(){
+  const reply=document.getElementById('popup-reply-in').value.trim();
+  if(!reply) return;
+  try{
+    await fetchJson('/reply', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({msg:reply})
+    });
+    dismissPopup();
+  } catch(e){
+    alert('Reply failed: '+e.message);
+  }
+}
+
+// ── FINAL ──────────────────────────────────────────────
+function goFinal(){
+  if(watchId!==null) navigator.geolocation.clearWatch(watchId);
+  go('p-final');
+  const c=document.getElementById('particles');
+  const em=['🌷','✨','🎂','💚','⭐','🎉','🌸','🫶'];
+  for(let i=0;i<24;i++){
+    const p=document.createElement('div');p.className='particle';
+    p.textContent=em[Math.floor(Math.random()*em.length)];
+    p.style.left=Math.random()*100+'vw';
+    p.style.animationDuration=(3+Math.random()*4)+'s';
+    p.style.animationDelay=(Math.random()*4)+'s';
+    c.appendChild(p);
+  }
+}
+
+// ── CLOCK ──────────────────────────────────────────────
+function updateAllClocks(){
+  const t=new Date(),s=t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0');
+  for(let i=0;i<5;i++){const el=document.getElementById('clk'+i);if(el)el.textContent=s;}
+}
+setInterval(updateAllClocks,30000);
+
+// ══════════════════════════════════════════════════════
+// ADMIN PANEL
+// ══════════════════════════════════════════════════════
+function openAdmin(){
+  prevPage=current; go('p-admin');
+  connectSocket('admin');
+  setTimeout(buildAdminMap,400);
+  updateAdminInfo();
+}
+function adminClose(){
+  go(prevPage);
+}
+
+function buildAdminMap(){
+  const wrap=document.getElementById('adm-map-wrap');
+  if(!wrap||adminMap) return;
+  wrap.innerHTML='<div id="adm-leaflet" style="width:100%;height:200px;"></div>';
+  adminMap=L.map('adm-leaflet',{zoomControl:true,attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(adminMap);
+  adminMap.setView([BUITEMS.lat,BUITEMS.lng],17);
+  // RED CIRCLE — BUITEMS boundary
+  adminBuitemsCircle=L.circle([BUITEMS.lat,BUITEMS.lng],{radius:400,color:'rgba(224,74,74,0.85)',weight:2.5,fill:false,dashArray:'8,5'}).addTo(adminMap);
+  // admin can tap map to drop pins
+  adminMap.on('click',e=>{ dropPin(e.latlng.lat,e.latlng.lng); });
+  updateAdminMarker();
+  renderPinList();
+}
+
+function updateAdminMarker(){
+  if(!adminMap || !latestLocation) return;
+  const d=latestLocation;
+  const ai=L.divIcon({html:`<div style="width:16px;height:16px;background:#20c97a;border:3px solid #fff;border-radius:50%;box-shadow:0 0 14px rgba(32,201,122,0.9);"></div>`,iconSize:[16,16],iconAnchor:[8,8],className:''});
+  if(adminMarker) adminMarker.setLatLng([d.lat,d.lng]);
+  else adminMarker=L.marker([d.lat,d.lng],{icon:ai,zIndexOffset:1000}).addTo(adminMap).bindPopup('Anaya 📍');
+  adminMap.panTo([d.lat,d.lng]);
+}
+
+function updateAdminInfo(){
+  document.getElementById('adm-status').innerHTML=
+    `Stage: <strong>${currentStageIdx+1}/5 — ${STAGES[currentStageIdx].name}</strong><br>Loop: <strong>ACTIVE</strong>`;
+  if(latestLocation){
+    const ago=Math.round((Date.now()-latestLocation.t)/1000);
+    document.getElementById('adm-loc-info').innerHTML=
+      `Lat: <strong>${latestLocation.lat.toFixed(5)}</strong>  Lng: <strong>${latestLocation.lng.toFixed(5)}</strong><br>`+
+      `Accuracy: <strong>±${latestLocation.acc}m</strong>  ·  <strong>${ago}s ago</strong>`;
+  } else {
+    document.getElementById('adm-loc-info').textContent='No location yet.';
+  }
+}
+
+function adminRefresh(){syncWithServer();}
+
+// ── PIN DROPS ──────────────────────────────────────────
+async function dropPin(lat,lng){
+  const label=prompt('Pin ka label (optional):') || '';
+  try {
+    const pin = await fetchJson('/pins', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({lat,lng,label})
+    });
+    adminPins.push(pin);
+    const pi=L.divIcon({html:`<div style="width:14px;height:14px;background:#f0a832;border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(240,168,50,0.8);"></div>`,iconSize:[14,14],iconAnchor:[7,7],className:''});
+    const mk=L.marker([lat,lng],{icon:pi}).addTo(adminMap);
+    if(label) mk.bindPopup(label).openPopup();
+    pinMarkers.push({id:pin.id,mk});
+    renderPinList();
+    Object.keys(stageMaps).forEach(i=>redrawPinsOnStageMap(parseInt(i)));
+  } catch (e) {
+    alert('Pin save failed: '+e.message);
+  }
+}
+
+function savePins(){
+  // no-op; pins are stored on the backend
+}
+
+async function clearAllPins(){
+  if(!confirm('Sare pins clear karein?')) return;
+  try {
+    await fetchJson('/pins', {method:'DELETE'});
+    adminPins=[];
+    pinMarkers.forEach(pm=>adminMap&&adminMap.removeLayer(pm.mk));
+    pinMarkers=[];
+    renderPinList();
+    Object.keys(stageMaps).forEach(i=>redrawPinsOnStageMap(parseInt(i)));
+  } catch(e) {
+    alert('Unable to clear pins: '+e.message);
+  }
+}
+
+async function removePin(id){
+  try {
+    await fetchJson(`/pins/${id}`, {method:'DELETE'});
+    adminPins=adminPins.filter(p=>p.id!==id);
+    const pm=pinMarkers.find(p=>p.id===id);
+    if(pm&&adminMap) adminMap.removeLayer(pm.mk);
+    pinMarkers=pinMarkers.filter(p=>p.id!==id);
+    renderPinList();
+    Object.keys(stageMaps).forEach(i=>redrawPinsOnStageMap(parseInt(i)));
+  } catch(e) {
+    alert('Unable to remove pin: '+e.message);
+  }
+}
+
+function renderPinList(){
+  const list=document.getElementById('pin-list');
+  list.innerHTML='';
+  if(!adminPins.length){list.innerHTML='<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:rgba(212,232,216,0.2);padding:4px;">No pins yet — tap map to add</div>';return;}
+  adminPins.forEach(pin=>{
+    const row=document.createElement('div');
+    row.className='pin-item';
+    row.innerHTML=`<span>📌 ${pin.lat.toFixed(4)},${pin.lng.toFixed(4)}</span>${pin.label?`<span style="color:rgba(240,168,50,0.7)">${pin.label}</span>`:''}<span class="pin-del" onclick="removePin(${pin.id})">×</span>`;
+    list.appendChild(row);
+  });
+}
+
+// ── MSG TYPE ───────────────────────────────────────────
+function setMsgType(t){
+  msgType=t;
+  document.getElementById('mt-text').classList.toggle('sel',t==='text');
+  document.getElementById('mt-voice').classList.toggle('sel',t==='voice');
+  document.getElementById('adm-text-compose').style.display=t==='text'?'block':'none';
+  document.getElementById('adm-voice-compose').style.display=t==='voice'?'block':'none';
+}
+
+function toggleReply(){
+  replyEnabled=!replyEnabled;
+  const sw=document.getElementById('reply-toggle');
+  sw.classList.toggle('on',replyEnabled);
+  document.getElementById('reply-lbl').textContent=replyEnabled?'Reply enabled (2-way)':'No reply (one-way)';
+}
+
+// ── VOICE RECORDING ────────────────────────────────────
+async function toggleRecord(){
+  if(!isRecording){
+    // START
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      recChunks=[];
+      mediaRec=new MediaRecorder(stream);
+      mediaRec.ondataavailable=e=>recChunks.push(e.data);
+      mediaRec.onstop=()=>{
+        voiceBlob=new Blob(recChunks,{type:'audio/webm'});
+        document.getElementById('rec-status').textContent='✓ Recording ready — press SEND';
+        stream.getTracks().forEach(t=>t.stop());
+      };
+      mediaRec.start();
+      isRecording=true;
+      recSecs=0;
+      document.getElementById('rec-btn').classList.add('recording');
+      document.getElementById('rec-btn').textContent='⏹';
+      document.getElementById('rec-time').style.display='block';
+      recTimer=setInterval(()=>{
+        recSecs++;
+        const m=Math.floor(recSecs/60),s=recSecs%60;
+        document.getElementById('rec-time').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+      },1000);
+    }catch(e){
+      document.getElementById('rec-status').textContent='Mic access denied';
+    }
+  } else {
+    // STOP
+    mediaRec&&mediaRec.stop();
+    isRecording=false;
+    clearInterval(recTimer);
+    document.getElementById('rec-btn').classList.remove('recording');
+    document.getElementById('rec-btn').textContent='🎤';
+    document.getElementById('rec-time').style.display='none';
+  }
+}
+
+// ── SEND MSG ───────────────────────────────────────────
+async function adminSendMsg(){
+  const payload={t:Date.now(),shown:false,reply:replyEnabled};
+
+  if(msgType==='voice'){
+    if(!voiceBlob){alert('Pehle recording karo!');return;}
+    // convert to base64
+    const b64=await blobToB64(voiceBlob);
+    payload.voiceB64=b64;
+    payload.voiceMime=voiceBlob.type;
+    voiceBlob=null;
+    document.getElementById('rec-status').textContent='Press to record voice message';
+  } else {
+    const msg=document.getElementById('adm-msg-in').value.trim();
+    if(!msg){alert('Message likhna bhoola!');return;}
+    payload.msg=msg;
+    document.getElementById('adm-msg-in').value='';
+  }
+
+  try{
+    await fetchJson('/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const btn=document.querySelector('[onclick="adminSendMsg()"]');
+    const orig=btn.textContent; btn.textContent='✓ SENT!';
+    setTimeout(()=>btn.textContent=orig,2000);
+  }catch(e){alert('Error: '+e.message);}
+}
+
+function blobToB64(blob){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+// ── ADMIN CONTROLS ─────────────────────────────────────
+function adminForce(){
+  if(currentStageIdx<4) goCard(currentStageIdx+1);
+  else goFinal();
+  adminClose();
+}
+async function adminReset(){
+  if(confirm('Game reset karein? Sab progress clear ho jayegi.')){
+    try{
+      await fetchJson('/reset', {method:'POST'});
+    }catch(e){ console.warn('Server reset failed', e); }
+    localStorage.clear(); location.reload();
+  }
+}
+
+// ── INIT ───────────────────────────────────────────────
+window.onload=()=>{
+  updateAllClocks();
+  syncWithServer();
+};
+</script>
+</body>
+</html>
